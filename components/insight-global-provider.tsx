@@ -4,6 +4,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -33,7 +34,6 @@ export interface InsightOpenOptions {
   initialUserMessage?: string | null
   initialUserMessageDisplay?: string | null
   starterQuestionChips?: string[] | null
-  /** Hide the FAB when the sidebar opens from a page that has its own trigger. */
   persona?: string
 }
 
@@ -61,6 +61,12 @@ export function useInsightGlobal(): InsightGlobalContextValue | null {
 // ---------------------------------------------------------------------------
 
 const EXCLUDED_PREFIXES = [
+  "/admin",
+  "/biologie/grile",
+  "/classrooms",
+  "/cursuri",
+  "/grile",
+  "/insight/chat",
   "/planckcode",
   "/login",
   "/register",
@@ -91,11 +97,19 @@ const EXCLUDED_EXACT = new Set([
 function shouldShowFab(pathname: string | null): boolean {
   if (!pathname) return false
   if (isLearningPathItemRoute(pathname)) return false
+  if (isProblemDetailRoute(pathname)) return false
   if (EXCLUDED_EXACT.has(pathname)) return false
   for (const prefix of EXCLUDED_PREFIXES) {
     if (pathname === prefix || pathname.startsWith(prefix + "/")) return false
   }
   return true
+}
+
+function isProblemDetailRoute(pathname: string): boolean {
+  return (
+    /^\/probleme\/(?!pagina(?:\/|$))[^/]+\/?$/.test(pathname) ||
+    /^\/(matematica|informatica)\/probleme\/[^/]+\/?$/.test(pathname)
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +125,14 @@ export function InsightGlobalProvider({ children }: { children: ReactNode }) {
   const pageContextRef = useRef<InsightOpenOptions | null>(null)
   const [activeOpts, setActiveOpts] = useState<InsightOpenOptions | null>(null)
 
-  const fabVisible = shouldShowFab(pathname) && !isOpen
+  const routeAllowsGlobalInsight = shouldShowFab(pathname)
+  const fabVisible = routeAllowsGlobalInsight && !isOpen
+
+  useEffect(() => {
+    if (!routeAllowsGlobalInsight) {
+      setIsOpen(false)
+    }
+  }, [routeAllowsGlobalInsight])
 
   const openInsight = useCallback(
     (opts?: InsightOpenOptions) => {
@@ -186,7 +207,7 @@ export function InsightGlobalProvider({ children }: { children: ReactNode }) {
     // Always slide-over (not embedded) so it persists across pages.
     embedOnDesktop: false,
     problemLightTheme: true,
-    lightChromeWhenSlideOver: false,
+    lightChromeWhenSlideOver: true,
     showCloseWhenDesktopEmbedded: false,
     onExitAnimationComplete: finalizePanelClose,
   }

@@ -18,10 +18,11 @@ import { supabase } from "@/lib/supabaseClient"
 import confetti from 'canvas-confetti'
 import { Skeleton } from "@/components/ui/skeleton"
 import { BadgeNotification } from "@/components/badge-notification"
-import { useInsightGlobal } from "@/components/insight-global-provider"
+import ProblemOrbButton from "@/components/problem-orb-button"
 
 // Lazy load heavy sidebar components for faster initial render
 const ProblemsSidebar = lazy(() => import("@/components/problems-sidebar").then(m => ({ default: m.ProblemsSidebar })))
+const InsightChatSidebar = lazy(() => import("@/components/insight-chat-sidebar"))
 import { cn } from "@/lib/utils"
 import { MOBILE_BOTTOM_NAV_PADDING_CLASS } from "@/lib/mobile-app-nav"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -194,16 +195,15 @@ export default function ProblemDetailClient({
   const [showBadgeNotification, setShowBadgeNotification] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [insightSidebarOpen, setInsightSidebarOpen] = useState(false)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const { user } = useAuth();
   const { isFree } = useSubscriptionPlan()
   const problemIcon = getProblemIcon(problem.id);
   const [showMobileUpgradeModal, setShowMobileUpgradeModal] = useState(false)
-  const insightGlobal = useInsightGlobal()
-  const openInsight = insightGlobal?.openInsight
-  const setInsightPageContext = insightGlobal?.setPageContext
-  const clearInsightPageContext = insightGlobal?.clearPageContext
   const [canMarkSolvedByAnswer, setCanMarkSolvedByAnswer] = useState(false)
+  const [initialHintMessage, setInitialHintMessage] = useState<string | null>(null)
+  const [initialInsightDisplayOverride, setInitialInsightDisplayOverride] = useState<string | null>(null)
   const [showCongratulationCloseButton, setShowCongratulationCloseButton] = useState(false)
   const [storedCatalogBackHref] = useState(() =>
     getStoredCatalogBackHref(subjectConfig.catalogHrefPrefix, subjectConfig.catalogBackHref),
@@ -213,20 +213,6 @@ export default function ProblemDetailClient({
   const [wrongAnswerPenalty, setWrongAnswerPenalty] = useState<ProblemWrongAnswerPenalty | null>(null)
   const [wrongPageShake, setWrongPageShake] = useState(false)
   useSocialProofTrigger({ enabled: Boolean(user?.id) && !isClassroomEmbed, problemId: problem.id })
-
-  useEffect(() => {
-    if (isClassroomEmbed || !setInsightPageContext) return
-
-    setInsightPageContext({
-      problemId: problem.id,
-      problemStatement: problem.statement || '',
-      persona: 'problem_tutor',
-    })
-
-    return () => {
-      clearInsightPageContext?.()
-    }
-  }, [clearInsightPageContext, isClassroomEmbed, problem.id, problem.statement, setInsightPageContext])
 
   useEffect(() => {
     if (!wrongAnswerPenalty) return
@@ -591,12 +577,9 @@ export default function ProblemDetailClient({
                           onHintClick={
                             !isClassroomEmbed
                               ? () => {
-                                  openInsight?.({
-                                    problemId: problem.id,
-                                    problemStatement: problem.statement || '',
-                                    persona: 'problem_tutor',
-                                    initialUserMessage: "Am nevoie de un hint",
-                                  })
+                                  setInitialHintMessage("Am nevoie de un hint")
+                                  setInitialInsightDisplayOverride(null)
+                                  setInsightSidebarOpen(true)
                                 }
                               : undefined
                           }
@@ -679,13 +662,9 @@ export default function ProblemDetailClient({
                         <button
                           type="button"
                           onClick={() => {
-                            openInsight?.({
-                              problemId: problem.id,
-                              problemStatement: problem.statement || '',
-                              persona: 'problem_tutor',
-                              initialUserMessage: "Explică-mi pas cu pas",
-                              initialUserMessageDisplay: "[Explică-mi pas cu pas]",
-                            })
+                            setInitialHintMessage("Explică-mi pas cu pas")
+                            setInitialInsightDisplayOverride("[Explică-mi pas cu pas]")
+                            setInsightSidebarOpen(true)
                           }}
                           className={cn(
                             "lg:hidden flex w-full min-h-[56px] cursor-pointer select-none touch-manipulation items-center gap-3 rounded-2xl border border-[#0b0d10]/12 bg-white p-4 text-left shadow-[0_4px_14px_-4px_rgba(11,13,16,0.12)] transition-[transform,box-shadow,background-color,border-color] duration-150",
@@ -766,6 +745,28 @@ export default function ProblemDetailClient({
         />
       </Suspense>
 
+      {!isClassroomEmbed ? (
+        <Suspense fallback={null}>
+          <InsightChatSidebar
+            isOpen={insightSidebarOpen}
+            onClose={() => setInsightSidebarOpen(false)}
+            problemId={problem.id}
+            problemStatement={problem.statement || ''}
+            persona="problem_tutor"
+            embedOnDesktop
+            problemLightTheme
+            lightChromeWhenSlideOver
+            showCloseWhenDesktopEmbedded={false}
+            initialUserMessage={initialHintMessage}
+            initialUserMessageDisplay={initialInsightDisplayOverride ?? initialHintMessage}
+            onInitialMessageSent={() => {
+              setInitialHintMessage(null)
+              setInitialInsightDisplayOverride(null)
+            }}
+          />
+        </Suspense>
+      ) : null}
+
       {congratulationMessage && (
         <div className="fixed inset-0 z-[550] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-3xl border border-[#0b0d10]/10 bg-white p-8 text-center shadow-2xl">
@@ -802,6 +803,16 @@ export default function ProblemDetailClient({
           onClose={() => {
             setShowBadgeNotification(false)
             setNewBadge(null)
+          }}
+        />
+      )}
+
+      {!isClassroomEmbed && (
+        <ProblemOrbButton
+          onOpenSidebar={() => {
+            setInitialHintMessage(null)
+            setInitialInsightDisplayOverride(null)
+            setInsightSidebarOpen(true)
           }}
         />
       )}

@@ -48,6 +48,19 @@ type PendingInsightImage = {
   compressedFile?: File
 }
 
+type MobileSwipeState = {
+  startX: number
+  startY: number
+  lastX: number
+  lastY: number
+  startedAt: number
+  horizontal: boolean
+}
+
+type PointerSwipeState = MobileSwipeState & {
+  pointerId: number
+}
+
 interface InsightChatSidebarProps {
   isOpen: boolean
   onClose: () => void
@@ -71,7 +84,7 @@ interface InsightChatSidebarProps {
    * - other: that string + "\\n\\n" + statement
    */
   problemContextPreamble?: string
-  /** Light UI (same chrome as embedded problem chat) on desktop when not embedded (e.g. learning path slide-over). */
+  /** Light UI (same chrome as embedded problem chat) when not embedded. */
   lightChromeWhenSlideOver?: boolean
   /** With embedOnDesktop: show header close (learning path). Catalog problem page omits. */
   showCloseWhenDesktopEmbedded?: boolean
@@ -267,6 +280,8 @@ export default function InsightChatSidebar({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const mobileSwipeRef = useRef<MobileSwipeState | null>(null)
+  const pointerSwipeRef = useRef<PointerSwipeState | null>(null)
   const [textareaHeight, setTextareaHeight] = useState(40)
   const abortControllerRef = useRef<AbortController | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -300,7 +315,7 @@ export default function InsightChatSidebar({
   // keep the previous behaviour so the panel stays active while embedded.
   const effectiveOpen = showCloseWhenDesktopEmbedded ? isOpen : (isOpen || isDesktopEmbedded)
   const isProblemLightTheme = Boolean(
-    problemLightTheme && (isDesktopEmbedded || (lightChromeWhenSlideOver && !isMobile))
+    problemLightTheme && (isDesktopEmbedded || lightChromeWhenSlideOver)
   )
 
   const starterChipsToShow = useMemo(
@@ -1418,6 +1433,135 @@ export default function InsightChatSidebar({
     [isOpen, onExitAnimationComplete]
   )
 
+  const handleSidebarTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      if (isDesktopEmbedded || !isOpen || e.touches.length !== 1) return
+
+      const touch = e.touches[0]
+      mobileSwipeRef.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastX: touch.clientX,
+        lastY: touch.clientY,
+        startedAt: Date.now(),
+        horizontal: false,
+      }
+    },
+    [isDesktopEmbedded, isOpen]
+  )
+
+  const handleSidebarTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    const state = mobileSwipeRef.current
+    if (!state || e.touches.length !== 1) return
+
+    const touch = e.touches[0]
+    state.lastX = touch.clientX
+    state.lastY = touch.clientY
+
+    const dx = state.lastX - state.startX
+    const dy = state.lastY - state.startY
+    const absDx = Math.abs(dx)
+    const absDy = Math.abs(dy)
+
+    if (!state.horizontal && absDx > 18 && absDx > absDy * 1.25) {
+      state.horizontal = true
+    }
+
+    if (state.horizontal && dx > 0) {
+      e.preventDefault()
+    }
+  }, [])
+
+  const handleSidebarTouchEnd = useCallback(() => {
+    const state = mobileSwipeRef.current
+    mobileSwipeRef.current = null
+    if (!state) return
+
+    const dx = state.lastX - state.startX
+    const dy = state.lastY - state.startY
+    const elapsed = Date.now() - state.startedAt
+    const isFastSwipe = elapsed < 320 && dx > 64
+    const isCommittedSwipe = dx > 96
+
+    if (dx > 0 && Math.abs(dx) > Math.abs(dy) * 1.25 && (isFastSwipe || isCommittedSwipe)) {
+      onClose()
+    }
+  }, [onClose])
+
+  const handleSidebarTouchCancel = useCallback(() => {
+    mobileSwipeRef.current = null
+  }, [])
+
+  const handleSidebarPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType !== 'mouse' || isDesktopEmbedded || !isOpen || e.button !== 0) return
+
+      pointerSwipeRef.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        lastX: e.clientX,
+        lastY: e.clientY,
+        startedAt: Date.now(),
+        horizontal: false,
+      }
+
+      e.currentTarget.setPointerCapture(e.pointerId)
+    },
+    [isDesktopEmbedded, isOpen]
+  )
+
+  const handleSidebarPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const state = pointerSwipeRef.current
+    if (!state || state.pointerId !== e.pointerId) return
+
+    state.lastX = e.clientX
+    state.lastY = e.clientY
+
+    const dx = state.lastX - state.startX
+    const dy = state.lastY - state.startY
+    const absDx = Math.abs(dx)
+    const absDy = Math.abs(dy)
+
+    if (!state.horizontal && absDx > 18 && absDx > absDy * 1.25) {
+      state.horizontal = true
+    }
+
+    if (state.horizontal && dx > 0) {
+      e.preventDefault()
+    }
+  }, [])
+
+  const handleSidebarPointerEnd = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const state = pointerSwipeRef.current
+      if (!state || state.pointerId !== e.pointerId) return
+
+      pointerSwipeRef.current = null
+
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      }
+
+      const dx = state.lastX - state.startX
+      const dy = state.lastY - state.startY
+      const elapsed = Date.now() - state.startedAt
+      const isFastSwipe = elapsed < 320 && dx > 64
+      const isCommittedSwipe = dx > 96
+
+      if (dx > 0 && Math.abs(dx) > Math.abs(dy) * 1.25 && (isFastSwipe || isCommittedSwipe)) {
+        onClose()
+      }
+    },
+    [onClose]
+  )
+
+  const handleSidebarPointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerSwipeRef.current?.pointerId === e.pointerId) {
+      pointerSwipeRef.current = null
+    }
+  }, [])
+
   // Prevent page scroll when hovering over sidebar
   useEffect(() => {
     if (!effectiveOpen || !sidebarRef.current || isDesktopEmbedded) return
@@ -1456,6 +1600,14 @@ export default function InsightChatSidebar({
       <div
         ref={sidebarRef}
         onTransitionEnd={handlePanelTransitionEnd}
+        onTouchStart={handleSidebarTouchStart}
+        onTouchMove={handleSidebarTouchMove}
+        onTouchEnd={handleSidebarTouchEnd}
+        onTouchCancel={handleSidebarTouchCancel}
+        onPointerDown={handleSidebarPointerDown}
+        onPointerMove={handleSidebarPointerMove}
+        onPointerUp={handleSidebarPointerEnd}
+        onPointerCancel={handleSidebarPointerCancel}
         className={`fixed right-0 ${
           isProblemLightTheme
             ? isDesktopEmbedded
