@@ -223,7 +223,7 @@ export function InsightGlobalProvider({ children }: { children: ReactNode }) {
           onClick={() => openInsight()}
           aria-label="Deschide Insight AI"
           className={cn(
-            "fizica-ai-fab-enter fixed bottom-6 right-5 z-[90] flex h-20 w-20 items-center justify-center transition-transform duration-200 hover:scale-105 active:scale-95",
+            "fizica-ai-fab-enter fixed bottom-6 right-5 z-[310] flex h-20 w-20 items-center justify-center transition-transform duration-200 hover:scale-105 active:scale-95",
             "lg:bottom-8 lg:right-8",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b0c0f]/20 focus-visible:ring-offset-2",
             MOBILE_BOTTOM_NAV_FAB_OFFSET_CLASS,

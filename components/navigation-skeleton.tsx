@@ -39,7 +39,7 @@ export function NavigationSkeleton() {
                     </div>
                 </div>
             </nav>
-            <div className="fixed inset-x-0 bottom-0 z-[300] bg-white pb-[env(safe-area-inset-bottom,0px)] burger:hidden">
+            <div className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-[300] bg-white pb-[env(safe-area-inset-bottom,0px)] burger:hidden">
                 <div className="flex h-[4.5rem] items-center justify-around px-2">
                     {Array.from({ length: 5 }).map((_, index) => (
                         <div key={index} className="flex flex-col items-center gap-1">

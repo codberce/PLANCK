@@ -201,6 +201,16 @@ const getRandomLoadingMessage = () => {
 
 const normalizeUserPrompt = (text: string) => text.trim().toLocaleLowerCase().replace(/[.!?]+$/g, '')
 
+const isInteractiveSidebarTarget = (target: EventTarget | null) => {
+  if (!(target instanceof Element)) return false
+
+  return Boolean(
+    target.closest(
+      'button, a, input, textarea, select, [role="button"], [role="link"], [contenteditable="true"]'
+    )
+  )
+}
+
 // Keep $$...$$ as primary format, but also accept \[...\] and \(...\).
 const normalizeLatexDelimiters = (text: string): string => {
   if (!text) return text
@@ -1436,6 +1446,7 @@ export default function InsightChatSidebar({
   const handleSidebarTouchStart = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
       if (isDesktopEmbedded || !isOpen || e.touches.length !== 1) return
+      if (isInteractiveSidebarTarget(e.target)) return
 
       const touch = e.touches[0]
       mobileSwipeRef.current = {
@@ -1495,6 +1506,7 @@ export default function InsightChatSidebar({
   const handleSidebarPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (e.pointerType !== 'mouse' || isDesktopEmbedded || !isOpen || e.button !== 0) return
+      if (isInteractiveSidebarTarget(e.target)) return
 
       pointerSwipeRef.current = {
         pointerId: e.pointerId,

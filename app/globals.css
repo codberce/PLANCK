@@ -74,35 +74,43 @@
 /* Mobile app shell: reserve space for fixed bottom nav (<948px, authenticated app routes) */
 @layer utilities {
   @media (max-width: 947px) {
-    body.mobile-app-shell .mobile-bottom-nav-pad {
+    body.mobile-app-shell .mobile-bottom-nav-pad,
+    body:has(.mobile-bottom-nav) .mobile-bottom-nav-pad {
       padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
     }
 
-    body.mobile-app-shell .mobile-bottom-nav-offset {
+    body.mobile-app-shell .mobile-bottom-nav-offset,
+    body:has(.mobile-bottom-nav) .mobile-bottom-nav-offset {
       bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
     }
 
-    body.mobile-app-shell .mobile-bottom-nav-fab-offset {
+    body.mobile-app-shell .mobile-bottom-nav-fab-offset,
+    body:has(.mobile-bottom-nav) .mobile-bottom-nav-fab-offset {
       bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
     }
 
-    body.mobile-app-shell .mobile-bottom-nav-quiz-pad {
+    body.mobile-app-shell .mobile-bottom-nav-quiz-pad,
+    body:has(.mobile-bottom-nav) .mobile-bottom-nav-quiz-pad {
       padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
     }
 
-    body.mobile-app-shell .mobile-bottom-nav-fab-above-quiz {
+    body.mobile-app-shell .mobile-bottom-nav-fab-above-quiz,
+    body:has(.mobile-bottom-nav) .mobile-bottom-nav-fab-above-quiz {
       bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
     }
 
-    body.mobile-app-shell .mobile-toast-viewport {
+    body.mobile-app-shell .mobile-toast-viewport,
+    body:has(.mobile-bottom-nav) .mobile-toast-viewport {
       bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
     }
 
-    body.mobile-app-shell .mobile-bottom-nav-draft-pad {
+    body.mobile-app-shell .mobile-bottom-nav-draft-pad,
+    body:has(.mobile-bottom-nav) .mobile-bottom-nav-draft-pad {
       padding-bottom: calc(12.5rem + env(safe-area-inset-bottom, 0px));
     }
 
-    body.mobile-app-shell .mobile-bottom-nav-draft-preview-pad {
+    body.mobile-app-shell .mobile-bottom-nav-draft-preview-pad,
+    body:has(.mobile-bottom-nav) .mobile-bottom-nav-draft-preview-pad {
       padding-bottom: calc(14rem + env(safe-area-inset-bottom, 0px));
     }
   }

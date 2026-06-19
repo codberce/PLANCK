@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, lazy, Suspense, useEffect, useCallback } from "react"
+import { useMemo, useState, lazy, Suspense, useEffect, useCallback, useRef } from "react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { Badge } from "@/components/ui/badge"
@@ -196,6 +196,7 @@ export default function ProblemDetailClient({
   const [imageLoaded, setImageLoaded] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [insightSidebarOpen, setInsightSidebarOpen] = useState(false)
+  const [insightSidebarDismissed, setInsightSidebarDismissed] = useState(false)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const { user } = useAuth();
   const { isFree } = useSubscriptionPlan()
@@ -204,6 +205,7 @@ export default function ProblemDetailClient({
   const [canMarkSolvedByAnswer, setCanMarkSolvedByAnswer] = useState(false)
   const [initialHintMessage, setInitialHintMessage] = useState<string | null>(null)
   const [initialInsightDisplayOverride, setInitialInsightDisplayOverride] = useState<string | null>(null)
+  const [isInsightDesktopViewport, setIsInsightDesktopViewport] = useState<boolean | null>(null)
   const [showCongratulationCloseButton, setShowCongratulationCloseButton] = useState(false)
   const [storedCatalogBackHref] = useState(() =>
     getStoredCatalogBackHref(subjectConfig.catalogHrefPrefix, subjectConfig.catalogBackHref),
@@ -212,7 +214,42 @@ export default function ProblemDetailClient({
   const [catalogBackLoading, setCatalogBackLoading] = useState(false)
   const [wrongAnswerPenalty, setWrongAnswerPenalty] = useState<ProblemWrongAnswerPenalty | null>(null)
   const [wrongPageShake, setWrongPageShake] = useState(false)
+  const wasDesktopInsightViewportRef = useRef<boolean | null>(null)
   useSocialProofTrigger({ enabled: Boolean(user?.id) && !isClassroomEmbed, problemId: problem.id })
+
+  useEffect(() => {
+    if (isClassroomEmbed) return
+
+    const syncDesktopInsightSidebar = () => {
+      const isDesktopViewport = window.matchMedia("(min-width: 1024px)").matches
+      const wasDesktopViewport = wasDesktopInsightViewportRef.current
+      wasDesktopInsightViewportRef.current = isDesktopViewport
+      setIsInsightDesktopViewport(isDesktopViewport)
+
+      if (isDesktopViewport && !insightSidebarDismissed) {
+        setInsightSidebarOpen(true)
+        return
+      }
+
+      if (!isDesktopViewport && wasDesktopViewport) {
+        setInsightSidebarOpen(false)
+      }
+    }
+
+    syncDesktopInsightSidebar()
+    window.addEventListener("resize", syncDesktopInsightSidebar)
+    return () => window.removeEventListener("resize", syncDesktopInsightSidebar)
+  }, [insightSidebarDismissed, isClassroomEmbed])
+
+  const openInsightSidebar = useCallback(() => {
+    setInsightSidebarDismissed(false)
+    setInsightSidebarOpen(true)
+  }, [])
+
+  const closeInsightSidebar = useCallback(() => {
+    setInsightSidebarDismissed(isInsightDesktopViewport === true)
+    setInsightSidebarOpen(false)
+  }, [isInsightDesktopViewport])
 
   useEffect(() => {
     if (!wrongAnswerPenalty) return
@@ -579,7 +616,7 @@ export default function ProblemDetailClient({
                               ? () => {
                                   setInitialHintMessage("Am nevoie de un hint")
                                   setInitialInsightDisplayOverride(null)
-                                  setInsightSidebarOpen(true)
+                                  openInsightSidebar()
                                 }
                               : undefined
                           }
@@ -664,7 +701,7 @@ export default function ProblemDetailClient({
                           onClick={() => {
                             setInitialHintMessage("Explică-mi pas cu pas")
                             setInitialInsightDisplayOverride("[Explică-mi pas cu pas]")
-                            setInsightSidebarOpen(true)
+                            openInsightSidebar()
                           }}
                           className={cn(
                             "lg:hidden flex w-full min-h-[56px] cursor-pointer select-none touch-manipulation items-center gap-3 rounded-2xl border border-[#0b0d10]/12 bg-white p-4 text-left shadow-[0_4px_14px_-4px_rgba(11,13,16,0.12)] transition-[transform,box-shadow,background-color,border-color] duration-150",
@@ -748,15 +785,15 @@ export default function ProblemDetailClient({
       {!isClassroomEmbed ? (
         <Suspense fallback={null}>
           <InsightChatSidebar
+            key={isInsightDesktopViewport ? "problem-insight-desktop" : "problem-insight-mobile"}
             isOpen={insightSidebarOpen}
-            onClose={() => setInsightSidebarOpen(false)}
+            onClose={closeInsightSidebar}
             problemId={problem.id}
             problemStatement={problem.statement || ''}
             persona="problem_tutor"
             embedOnDesktop
             problemLightTheme
             lightChromeWhenSlideOver
-            showCloseWhenDesktopEmbedded={false}
             initialUserMessage={initialHintMessage}
             initialUserMessageDisplay={initialInsightDisplayOverride ?? initialHintMessage}
             onInitialMessageSent={() => {
@@ -812,7 +849,7 @@ export default function ProblemDetailClient({
           onOpenSidebar={() => {
             setInitialHintMessage(null)
             setInitialInsightDisplayOverride(null)
-            setInsightSidebarOpen(true)
+            openInsightSidebar()
           }}
         />
       )}
