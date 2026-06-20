@@ -13,6 +13,7 @@ import { LearningPathItemNavigationProvider } from "@/components/invata/learning
 import { LearningPathFlashcardFlowProvider } from "@/components/invata/learning-path-flashcard-flow-context"
 import type { LearningPathSlideDirection } from "@/components/invata/learning-path-item-slide-container"
 import { LearningPathItemEnterUp } from "@/components/invata/learning-path-item-enter-up"
+import { getFizicaMapHref } from "@/lib/supabase-fizica-learning-map"
 
 interface LearningPathItemViewProps {
   payload: LearningPathItemPayload
@@ -68,6 +69,10 @@ export function LearningPathItemView({
   const prevItemHref =
     payload.prevItemHref ?? (itemIndex > 1 ? `${lessonBaseHref}/${itemIndex - 1}` : null)
 
+  const exitHref = payload.fizicaMapContext
+    ? getFizicaMapHref(payload.fizicaMapContext.routeSlug, payload.fizicaMapContext.chapterSlug)
+    : lessonBaseHref
+
   const isPoll = item.item_type === "poll"
   const isProblem =
     (item.item_type === "problem" || item.item_type === "math_problem") && !!sourceProblem
@@ -121,6 +126,7 @@ export function LearningPathItemView({
         completedItemIdsForLesson={completedItemIdsForLesson}
         fizicaAssignmentItemIds={fizicaAssignmentItemIds}
         lessonBaseHref={lessonBaseHref}
+        exitHref={exitHref}
         isTextLesson={isTextLesson}
         hideBottomCta={hideBottomCta}
         overflowHidden={overflowHidden}

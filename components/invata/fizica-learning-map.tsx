@@ -354,14 +354,15 @@ function LessonNode({
     <div
       data-map-node={lesson.id}
       className={cn(
-        "relative z-[3] shrink-0 overflow-hidden rounded-full",
+        "relative z-[3] shrink-0 rounded-full",
+        isActive && "fizica-map-node-glow",
         isLocked && "opacity-55",
       )}
       style={{ width: NODE_SIZE, height: NODE_SIZE }}
     >
       <div
         className={cn(
-          "relative h-full w-full",
+          "relative h-full w-full overflow-hidden rounded-full",
           interactive &&
             "transition-transform duration-150 ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-y-1 group-active:translate-y-1",
         )}
@@ -397,6 +398,17 @@ function scrollLessonMarkerIntoView(lessonId: string) {
     marker?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" })
   })
 }
+
+function getMapScrollContainer(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(".catalog-problems-scroll")
+}
+
+function scrollMapToTop() {
+  const container = getMapScrollContainer()
+  container?.scrollTo({ top: 0, behavior: "auto" })
+}
+
+const FIZICA_MAP_DESCEND_DELAY_MAX_MS = 1200
 
 function reconcileFizicaMapLessonStatuses(
   lessons: MapLesson[],
@@ -1302,6 +1314,7 @@ export function FizicaLearningMap({
     [displayLessons],
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const previousChapterKeyRef = useRef<string | null>(null)
   const [pendingLessonHref, setPendingLessonHref] = useState<string | null>(null)
   const pendingLessonHrefRef = useRef<string | null>(null)
   const [isIrisActive, setIsIrisActive] = useState(false)
@@ -1356,10 +1369,29 @@ export function FizicaLearningMap({
   useEffect(() => {
     if (isMapNavigating) return
     setSelectedId(null)
-    if (defaultSelectedId) {
+
+    const previousChapterKey = previousChapterKeyRef.current
+    const isChapterChange = previousChapterKey !== null && previousChapterKey !== chapterKey
+    previousChapterKeyRef.current = chapterKey
+
+    if (!defaultSelectedId) return
+
+    if (!isChapterChange) {
       scrollLessonMarkerIntoView(defaultSelectedId)
+      return
     }
-  }, [chapterKey, defaultSelectedId, isMapNavigating])
+
+    scrollMapToTop()
+    const descendDelay = Math.min(
+      getMapRevealAnimationMs(displayLessons.length),
+      FIZICA_MAP_DESCEND_DELAY_MAX_MS,
+    )
+    const timeout = window.setTimeout(() => {
+      scrollLessonMarkerIntoView(defaultSelectedId)
+    }, descendDelay)
+
+    return () => window.clearTimeout(timeout)
+  }, [chapterKey, defaultSelectedId, displayLessons.length, isMapNavigating])
 
   useEffect(() => {
     if (!completedLessonFromUrl || isMapNavigating) return
@@ -1505,11 +1537,6 @@ export function FizicaLearningMap({
           >
             <div className="px-5 pb-12 pt-5 sm:px-8 lg:px-10 lg:pt-8 xl:px-12">
               <MobileRouteChapterPicker mapData={mapData} onNavigate={handleMapNavigate} />
-              {!isMapNavigating && selectedChapter ? (
-                <h2 className="mb-5 text-center text-lg font-bold leading-tight text-[#0b0c0f] sm:mb-6 lg:mb-8 lg:text-3xl xl:text-4xl">
-                  {selectedChapter.title}
-                </h2>
-              ) : null}
               {showCalendar && !isMapNavigating ? (
                 <div className="mb-5 lg:hidden">
                   <FizicaCalendarCard
@@ -1518,6 +1545,11 @@ export function FizicaLearningMap({
                     className="fizica-ai-fab-enter"
                   />
                 </div>
+              ) : null}
+              {!isMapNavigating && selectedChapter ? (
+                <h2 className="mb-5 text-center text-lg font-bold leading-tight text-[#0b0c0f] sm:mb-6 lg:mb-8 lg:text-3xl xl:text-4xl">
+                  {selectedChapter.title}
+                </h2>
               ) : null}
               {isMapNavigating ? (
                 <FizicaMapLoadingSpinner />

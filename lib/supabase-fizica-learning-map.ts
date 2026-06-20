@@ -230,10 +230,6 @@ function resolveLessonStatuses(
 
   for (const lesson of lessons) {
     const assignments = assignmentsByLesson.get(lesson.id) ?? []
-    const firstAssignment = assignments[0]
-    const context = firstAssignment
-      ? itemContexts.get(firstAssignment.learning_path_lesson_item_id)
-      : undefined
 
     const assignedItemIds = assignments
       .map((assignment) => assignment.learning_path_lesson_item_id)
@@ -244,6 +240,13 @@ function resolveLessonStatuses(
       assignedItemIds.every((itemId) => completedItemIds.has(itemId))
 
     if (allCompleted) completedCount += 1
+
+    const firstItemId = assignedItemIds[0] ?? null
+    const firstUncompletedItemId =
+      assignedItemIds.find((itemId) => !completedItemIds.has(itemId)) ?? null
+    // Reia lecția de la primul item nefinalizat; cele finalizate repornesc de la început.
+    const entryItemId = allCompleted ? firstItemId : firstUncompletedItemId ?? firstItemId
+    const context = entryItemId ? itemContexts.get(entryItemId) : undefined
 
     let status: FizicaLessonStatus = "locked"
     let href: string | null = null

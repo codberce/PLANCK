@@ -75,6 +75,8 @@ interface LessonItemShellProps {
   /** Itemii din lecția Fizică (assignment), când utilizatorul vine de pe /invata/fizica. */
   fizicaAssignmentItemIds?: string[]
   lessonBaseHref: string
+  /** Destinația la ieșirea din lecție. Implicit `lessonBaseHref`; pentru Fizică, harta `/invata/fizica`. */
+  exitHref?: string
   isTextLesson: boolean
   hideBottomCta?: boolean
   overflowHidden?: boolean
@@ -97,6 +99,7 @@ function LessonItemShellInner({
   completedItemIdsForLesson = [],
   fizicaAssignmentItemIds,
   lessonBaseHref,
+  exitHref,
   isTextLesson,
   hideBottomCta = false,
   overflowHidden = false,
@@ -119,6 +122,7 @@ function LessonItemShellInner({
   const [currentItemCompleted, setCurrentItemCompleted] = useState(initialCurrentItemCompleted)
   const usesFizicaAssignmentProgress =
     Boolean(fizicaAssignmentItemIds?.length)
+  const exitTargetHref = exitHref ?? lessonBaseHref
 
   const progressItemIds = usesFizicaAssignmentProgress
     ? fizicaAssignmentItemIds!
@@ -602,7 +606,7 @@ function LessonItemShellInner({
             </button>
             <button
               type="button"
-              onClick={() => router.push(lessonBaseHref)}
+              onClick={() => router.push(exitTargetHref)}
               className="text-sm font-medium text-red-500 transition-colors hover:text-red-600"
             >
               Ieși din lecție

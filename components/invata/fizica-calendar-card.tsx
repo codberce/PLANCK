@@ -202,6 +202,34 @@ function MinimizedMonthCalendar({ referenceDate }: { referenceDate: Date }) {
   )
 }
 
+function MinimizedWeekCalendar({ referenceDate }: { referenceDate: Date }) {
+  const weekDays = useMemo(() => {
+    const weekStart = startOfWeek(referenceDate, { locale: ro })
+    const weekEnd = endOfWeek(referenceDate, { locale: ro })
+    return eachDayOfInterval({ start: weekStart, end: weekEnd })
+  }, [referenceDate])
+
+  const monthLabel = format(referenceDate, "LLLL yyyy", { locale: ro })
+
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="truncate text-center text-[10px] font-semibold capitalize leading-none text-[#0b0c0f]">
+        {monthLabel}
+      </p>
+      <div className="grid grid-cols-7 gap-1">
+        {weekDays.map((day, index) => (
+          <div key={day.toISOString()} className="flex flex-col items-center gap-0.5">
+            <span className="text-[8px] font-medium uppercase text-[#9ca3af]">
+              {WEEKDAY_LABELS[index]}
+            </span>
+            <EventDayCell date={day} compact />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function CalendarNavButton({
   className,
   onClick,
@@ -307,10 +335,14 @@ export function FizicaCalendarCard({
           className={cn(
             "cursor-pointer rounded-2xl border border-[#0b0c0f]/10 bg-white shadow-[0_8px_32px_-12px_rgba(11,12,15,0.18)] transition-[transform,width,box-shadow] duration-300 ease-out",
             variant === "desktop" && "absolute top-5 right-5 z-20 hidden lg:block",
-            variant === "mobile" && "mx-auto w-full max-w-[240px]",
-            isExpanded
-              ? "w-[400px] shadow-[0_16px_48px_-12px_rgba(11,12,15,0.24)]"
-              : "w-[196px]",
+            variant === "desktop" &&
+              (isExpanded
+                ? "w-[400px] shadow-[0_16px_48px_-12px_rgba(11,12,15,0.24)]"
+                : "w-[196px]"),
+            variant === "mobile" && "mx-auto w-full",
+            variant === "mobile" &&
+              isExpanded &&
+              "shadow-[0_16px_48px_-12px_rgba(11,12,15,0.24)]",
             !isExpanded &&
               "[@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.03] [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-[0_12px_36px_-12px_rgba(11,12,15,0.22)]",
             className,
@@ -354,6 +386,8 @@ export function FizicaCalendarCard({
                   NextMonthButton: CalendarNavButton,
                 }}
               />
+            ) : variant === "mobile" ? (
+              <MinimizedWeekCalendar referenceDate={today} />
             ) : (
               <MinimizedMonthCalendar referenceDate={today} />
             )}
